@@ -1240,6 +1240,9 @@ export declare class LGraphCanvas {
     render_connection_arrows: boolean;
     render_connections_border: boolean;
     render_connections_shadows: boolean;
+    render_link_center: boolean;
+    render_link_tooltip: boolean;
+    over_link_center: Object;
     render_curved_connections: boolean;
     render_execution_order: boolean;
     render_only_selected: boolean;

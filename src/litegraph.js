@@ -5223,6 +5223,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_execution_order = false;
         this.render_title_colored = true;
 		this.render_link_tooltip = true;
+        this.render_link_center = true;
 
         this.links_render_mode = LiteGraph.SPLINE_LINK;
 
@@ -9523,10 +9524,13 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.restore();
             }
 
-            //circle
-            ctx.beginPath();
-            ctx.arc(pos[0], pos[1], 5, 0, Math.PI * 2);
-            ctx.fill();
+            if (this.render_link_center)
+            {
+                //circle
+                ctx.beginPath();
+                ctx.arc(pos[0], pos[1], 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         //render flowing points
