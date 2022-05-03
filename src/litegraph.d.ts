@@ -1145,6 +1145,12 @@ export declare class LGraphCanvas {
     always_render_background: boolean;
     autoresize?: boolean;
     background_image: string;
+    title_text_font: string;
+    inner_text_font: string;
+    title_shadow_blur: number;
+    title_shadow_offset_x: number;
+    title_shadow_offset_y: number;
+    title_shadow_color: string;
     bgcanvas: HTMLCanvasElement;
     bgctx: CanvasRenderingContext2D;
     canvas: HTMLCanvasElement;

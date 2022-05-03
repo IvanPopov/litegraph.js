@@ -5178,6 +5178,10 @@ LGraphNode.prototype.executeAction = function(action)
             output_off: "#778",
             output_on: "#7F7" //"#BBD"
 		};
+        this.title_shadow_blur = 0;
+        this.title_shadow_offset_x = 0;
+        this.title_shadow_offset_y = 0;
+        this.title_shadow_color = '#000';
         this.default_connection_color_byType = {
             /*number: "#7F7",
             string: "#77F",
@@ -9018,6 +9022,11 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.font = this.title_text_font;
                 var title = String(node.getTitle());
                 if (title) {
+                    ctx.shadowBlur = this.title_shadow_blur;
+                    ctx.shadowOffsetX = this.title_shadow_offset_x;
+                    ctx.shadowOffsetY = this.title_shadow_offset_y;
+                    ctx.shadowColor = this.title_shadow_color;
+
                     if (selected) {
                         ctx.fillStyle = LiteGraph.NODE_SELECTED_TITLE_COLOR;
                     } else {
