@@ -134,7 +134,8 @@
 		allow_multi_output_for_events: true, // [false!] being events, it is strongly reccomended to use them sequentually, one by one
 
 		middle_click_slot_add_default_node: false, //[true!] allows to create and connect a ndoe clicking with the third button (wheel)
-		
+		middle_click_canvas_dragging: false,
+
 		release_link_on_empty_shows_menu: false, //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
 		
         pointerevents_method: "mouse", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
@@ -6120,8 +6121,10 @@ LGraphNode.prototype.executeAction = function(action)
             
         } else if (e.which == 2) {
             //middle button
-        	
-			if (LiteGraph.middle_click_slot_add_default_node){
+            if (LiteGraph.middle_click_canvas_dragging)
+            {
+                this.dragging_canvas = true;
+            } else if (LiteGraph.middle_click_slot_add_default_node){
 				if (node && this.allow_interaction && !skip_action && !this.read_only){
 					//not dragging mouse to connect two slots
 					if (
