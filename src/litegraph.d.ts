@@ -30,9 +30,11 @@ export interface INodeSlot {
         | typeof LiteGraph.LEFT;
     color_on?: string;
     color_off?: string;
+    visible?: boolean;
     shape?: SlotShape;
     locked?: boolean;
     nameLocked?: boolean;
+    pos?: number[];
 }
 
 export interface INodeInputSlot extends INodeSlot {
@@ -223,6 +225,8 @@ export const LiteGraph: {
     node_types_by_file_extension: Record<string, LGraphNodeConstructor>;
     /** node types by class name */
     Nodes: Record<string, LGraphNodeConstructor>;
+
+    draw_invisible_connections: boolean;
 
     /** used to add extra features to the search box */
     searchbox_extras: Record<
@@ -597,8 +601,12 @@ export type SerializedLGraphNode<T extends LGraphNode = LGraphNode> = {
 export declare class LGraphNode {
     static title_color: string;
     static title: string;
+    static can_be_dropped?: boolean;
+    static can_accept_drop?: boolean;
     static type: null | string;
     static widgets_up: boolean;
+    static title_mode?: number;
+    static title_offset_x?: number;
     constructor(title?: string);
 
     title: string;
@@ -907,11 +915,14 @@ export declare class LGraphNode {
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-appearance
     onDrawBackground?(
         ctx: CanvasRenderingContext2D,
-        canvas: HTMLCanvasElement
+        graphcanvas: LGraphCanvas,
+        canvas: HTMLCanvasElement,
+        mouse: [ number, number ]
     ): void;
     onDrawForeground?(
         ctx: CanvasRenderingContext2D,
-        canvas: HTMLCanvasElement
+        graphcanvas: LGraphCanvas,
+        canvas: HTMLCanvasElement,
     ): void;
 
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-behaviour
@@ -940,6 +951,10 @@ export declare class LGraphNode {
         pos: Vector2,
         graphCanvas: LGraphCanvas
     ): void;
+    onDropEnter?(node: LGraphNode): void;
+    onDropLeave?(node: LGraphNode): void;
+    onDrag?(canvas: LGraphCanvas): void;
+    onBringToFront?(canvas: LGraphCanvas): void;
     onKey?(event: KeyboardEvent, pos: Vector2, graphCanvas: LGraphCanvas): void;
 
     /** Called by `LGraphCanvas.selectNodes` */
@@ -1502,7 +1517,7 @@ declare global {
             y: number,
             width: number,
             height: number,
-            radius: number,
+            radius: number | number[],
             radiusLow: number
         ): void;
     }
