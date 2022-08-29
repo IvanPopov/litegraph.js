@@ -607,6 +607,7 @@ export declare class LGraphNode {
     static widgets_up: boolean;
     static title_mode?: number;
     static title_offset_x?: number;
+    static use_gradients?: boolean;
     constructor(title?: string);
 
     title: string;
@@ -617,6 +618,7 @@ export declare class LGraphNode {
     pos: Vector2;
     is_selected: boolean;
     mouseOver: boolean;
+    use_gradients?: boolean;
 
     id: number;
 

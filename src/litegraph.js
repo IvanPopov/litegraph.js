@@ -732,7 +732,7 @@
 		}
     });
 
-    function hexToRgbA(hex, alpha = 1){
+    function hexToRgbA(hex, alpha = 1, intensity = 1){
         var c;
         if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
             c= hex.substring(1).split('');
@@ -740,7 +740,7 @@
                 c= [c[0], c[0], c[1], c[1], c[2], c[2]];
             }
             c= '0x'+c.join('');
-            return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+`,${alpha})`;
+            return 'rgba('+[((c>>16))&255, ((c>>8))&255, (c)&255].map(x => Math.min(255, x * intensity)).join(',')+`,${alpha})`;
         }
         throw new Error('Bad Hex');
     }
@@ -5221,14 +5221,26 @@ LGraphNode.prototype.executeAction = function(action)
         this.title_shadow_offset_y = 0;
         this.title_shadow_color = '#000';
         this.default_connection_color_byType = {
-            /*number: "#7F7",
-            string: "#77F",
-            boolean: "#F77",*/
+            number: "#26547C",
+            float: "#26547C",
+            uint: "#FFD166",
+            boolean: "#EF476F",
+            bool: "#EF476F",
+            float3: "#FFD166",
+            float2: "#45D592",
+            float4: "#06D6A0",
+            string: "#77F"
         }
         this.default_connection_color_byTypeOff = {
-            /*number: "#474",
-            string: "#447",
-            boolean: "#744",*/
+            number: "#26547C",
+            float: "#26547C",
+            uint: "#FFD166",
+            boolean: "#EF476F",
+            bool: "#EF476F",
+            float3: "#FFD166",
+            float2: "#45D592",
+            float4: "#06D6A0",
+            string: "#77F"
         };
 
         this.highquality_render = true;
@@ -5258,14 +5270,14 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_shadows = true;
         this.render_canvas_border = true;
         this.render_connections_shadows = false; //too much cpu
-        this.render_connections_border = true;
+        this.render_connections_border = false;
         this.render_curved_connections = false;
         this.render_connection_arrows = false;
         this.render_collapsed_slots = true;
         this.render_execution_order = false;
         this.render_title_colored = true;
 		this.render_link_tooltip = true;
-        this.render_link_center = true;
+        this.render_link_center = false;
 
         this.links_render_mode = LiteGraph.SPLINE_LINK;
 
@@ -5289,8 +5301,8 @@ LGraphNode.prototype.executeAction = function(action)
 		this.onBeforeChange = null; //called before modifying the graph
 		this.onAfterChange = null; //called after modifying the graph
 
-        this.connections_width = 3;
-        this.round_radius = 8;
+        this.connections_width = 2;
+        this.round_radius = 3;
 
         this.current_node = null;
         this.node_widget = null; //used for widgets
@@ -5322,7 +5334,17 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
-        number: "#AAA",
+
+        number: "#26547C",
+        float: "#26547C",
+        uint: "#FFD166",
+        boolean: "#EF476F",
+        bool: "#EF476F",
+        float3: "#FFD166",
+        float2: "#45D592",
+        float4: "#06D6A0",
+        string: "#77F",
+
         node: "#DCA"
     };
     LGraphCanvas.gradients = {}; //cache of gradients
@@ -6419,14 +6441,16 @@ LGraphNode.prototype.executeAction = function(action)
                     const newDnds = nodesUnderCursor.filter(node => !this.dnd_nodes.includes(node));
                     
                     nomoreDnds.forEach(target => {
-                        target.onDropLeave?.(node, this);
+                        if (target.onDropLeave)
+                            target.onDropLeave(node, this);
                     });
 
                     newDnds.forEach(target => {
-                        target.onDropEnter?.(node, this);
+                        if (target.onDropEnter)
+                            target.onDropEnter(node, this);
                     });
 
-                    nodesUnderCursor.forEach(target => target.onDropMove?.(node, [e.canvasX - target.pos[0], e.canvasY - target.pos[1]], this));
+                    nodesUnderCursor.forEach(target => target.onDropMove && target.onDropMove(node, [e.canvasX - target.pos[0], e.canvasY - target.pos[1]], this));
                     this.dnd_nodes = nodesUnderCursor;
                 }
 
@@ -6816,7 +6840,8 @@ LGraphNode.prototype.executeAction = function(action)
 
                 if (this.dnd_nodes) {
                     this.dnd_nodes.forEach(target => {
-                        target.onDrop?.(this.node_dragged);
+                        if (target.onDrop)
+                            target.onDrop(this.node_dragged);
                     });
                     this.dnd_nodes = null;
                 }
@@ -8327,6 +8352,8 @@ LGraphNode.prototype.executeAction = function(action)
                     pattern = this._pattern;
                 }
                 if (pattern) {
+                    ctx.save();
+                    ctx.filter = "brightness(120%)";
                     ctx.fillStyle = pattern;
                     ctx.fillRect(
                         this.visible_area[0],
@@ -8334,6 +8361,7 @@ LGraphNode.prototype.executeAction = function(action)
                         this.visible_area[2],
                         this.visible_area[3]
                     );
+                    ctx.restore();
                     ctx.fillStyle = "transparent";
                 }
 
@@ -8431,9 +8459,9 @@ LGraphNode.prototype.executeAction = function(action)
 
         if (this.render_shadows && !low_quality) {
             ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
-            ctx.shadowOffsetX = 2 * this.ds.scale;
-            ctx.shadowOffsetY = 2 * this.ds.scale;
-            ctx.shadowBlur = 3 * this.ds.scale;
+            ctx.shadowOffsetX = 0 * this.ds.scale;
+            ctx.shadowOffsetY = 3 * this.ds.scale;
+            ctx.shadowBlur = 6 * this.ds.scale;
         } else {
             ctx.shadowColor = "transparent";
         }
@@ -8544,8 +8572,8 @@ LGraphNode.prototype.executeAction = function(action)
                               this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_on
                             : slot.color_off ||
-                              this.default_connection_color_byTypeOff[slot_type] ||
-                              this.default_connection_color_byType[slot_type] ||
+                            //   this.default_connection_color_byTypeOff[slot_type] ||
+                            //   this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_off;
 
                     var pos = node.getConnectionPos(true, i, slot_pos);
@@ -8604,8 +8632,13 @@ LGraphNode.prototype.executeAction = function(action)
 						else
 	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
                     }
-                    ctx.fill();
+                    ctx.strokeStyle = ctx.fillStyle;
+                    ctx.stroke();
 
+                    if (slot.link) {
+                        ctx.fill();
+                    }
+                    
                     //render name
                     if (render_text) {
                         var text = slot.label != null ? slot.label : slot.name;
@@ -8706,12 +8739,19 @@ LGraphNode.prototype.executeAction = function(action)
 	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
                     }
 
+                    ctx.strokeStyle = ctx.fillStyle;
+                    ctx.stroke();
+
+                    if (slot.links && slot.links.length) {
+                        ctx.fill();
+                    }
+
                     //trigger
                     //if(slot.node_id != null && slot.slot == -1)
                     //	ctx.fillStyle = "#F85";
 
                     //if(slot.links != null && slot.links.length)
-                    ctx.fill();
+                    // ctx.fill();
 					if(!low_quality && doStroke)
 	                    ctx.stroke();
 
@@ -8723,7 +8763,7 @@ LGraphNode.prototype.executeAction = function(action)
                             if (horizontal || slot.dir == LiteGraph.DOWN) {
                                 ctx.fillText(text, pos[0], pos[1] - 8);
                             } else {
-                                ctx.fillText(text, pos[0] - 10, pos[1] + 5);
+                                ctx.fillText(text, pos[0] - 10, pos[1] + 4);
                             }
                         }
                     }
@@ -8926,10 +8966,10 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         var area = tmp_area;
-        area[0] = 0; //x
-        area[1] = render_title ? -title_height : 0; //y
-        area[2] = size[0] + 1; //w
-        area[3] = render_title ? size[1] + title_height : size[1]; //h
+        area[0] = -1; //x
+        area[1] = render_title ? -title_height -1 : 0; //y
+        area[2] = size[0] + 3; //w
+        area[3] = render_title ? size[1] + title_height + 2 : size[1]; //h
 
         var old_alpha = ctx.globalAlpha;
 
@@ -8950,6 +8990,7 @@ LGraphNode.prototype.executeAction = function(action)
                     area[3],
                     shape == LiteGraph.CARD_SHAPE ? [this.round_radius,this.round_radius,0,0] : [this.round_radius] 
                 );
+
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
                     size[0] * 0.5,
@@ -8962,12 +9003,12 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.fill();
 
 			//separator
-			if(!node.flags.collapsed && render_title)
-			{
-				ctx.shadowColor = "transparent";
-				ctx.fillStyle = "rgba(0,0,0,0.2)";
-				ctx.fillRect(0, -1, area[2], 2);
-			}
+			// if(!node.flags.collapsed && render_title)
+			// {
+			// 	ctx.shadowColor = "transparent";
+			// 	ctx.fillStyle = "rgba(0,0,0,0.5)";
+			// 	ctx.fillRect(0, -1, area[2] - 3, 2);
+			// }
         }
         ctx.shadowColor = "transparent";
 
@@ -8989,6 +9030,11 @@ LGraphNode.prototype.executeAction = function(action)
                 if (node.flags.collapsed) {
                     ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
                 }
+
+                let use_gradients = node.constructor.use_gradients !== false &&
+                    node.use_gradients !== false && this.use_gradients;
+
+
 
                 //* gradient test
                 if (this.use_gradients) {
@@ -9017,6 +9063,19 @@ LGraphNode.prototype.executeAction = function(action)
                     );
                 }
                 ctx.fill();
+
+                
+                if (0) {
+                    ctx.save();
+                    ctx.clip();
+                    ctx.shadowColor='black';
+                    ctx.shadowBlur = 10 * this.ds.scale;
+                    ctx.globalCompositeOperation='destination-in';
+                    ctx.fill();
+                    ctx.globalCompositeOperation='source-over';   
+                    ctx.restore();
+                }
+
                 ctx.shadowColor = "transparent";
             }
 
@@ -9541,6 +9600,13 @@ LGraphNode.prototype.executeAction = function(action)
 
         ctx.lineWidth = this.connections_width;
         ctx.fillStyle = ctx.strokeStyle = color;
+        ctx.shadowBlur = 3 * this.ds.scale;
+        ctx.shadowColor = 'black';
+        ctx.shadowOffsetX = 0;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 1;
+        ctx.fillStyle = ctx.strokeStyle = hexToRgbA(ctx.fillStyle, 1, 1.5);
         ctx.stroke();
         //end line shape
 
