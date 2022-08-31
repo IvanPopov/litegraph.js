@@ -2572,7 +2572,8 @@
             size: this.size,
             flags: LiteGraph.cloneObject(this.flags),
 			order: this.order,
-            mode: this.mode
+            mode: this.mode,
+            hide_input_connections: this.hide_input_connections
         };
 
         //special case for when there were errors
@@ -5221,9 +5222,10 @@ LGraphNode.prototype.executeAction = function(action)
         this.title_shadow_offset_y = 0;
         this.title_shadow_color = '#000';
         this.default_connection_color_byType = {
-            number: "#26547C",
-            float: "#26547C",
-            uint: "#FFD166",
+            number: "#1da144",
+            float: "#1da144",
+            uint: "#ffb066",
+            int: "#FFD166",
             boolean: "#EF476F",
             bool: "#EF476F",
             float3: "#FFD166",
@@ -5232,9 +5234,10 @@ LGraphNode.prototype.executeAction = function(action)
             string: "#77F"
         }
         this.default_connection_color_byTypeOff = {
-            number: "#26547C",
-            float: "#26547C",
-            uint: "#FFD166",
+            number: "#1da144",
+            float: "#1da144",
+            uint: "#ffb066",
+            int: "#FFD166",
             boolean: "#EF476F",
             bool: "#EF476F",
             float3: "#FFD166",
@@ -5335,9 +5338,10 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
 
-        number: "#26547C",
-        float: "#26547C",
-        uint: "#FFD166",
+        number: "#1da144",
+        float: "#1da144",
+        uint: "#ffb066",
+        int: "#FFD166",
         boolean: "#EF476F",
         bool: "#EF476F",
         float3: "#FFD166",
@@ -8635,9 +8639,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.strokeStyle = ctx.fillStyle;
                     ctx.stroke();
 
-                    if (slot.link)
-                    {
-
+                    if (slot.link) {
                         ctx.fill();
                     }
                     
@@ -9372,8 +9374,9 @@ LGraphNode.prototype.executeAction = function(action)
                     continue;
                 }
 
-                var forceHide = start_slot.visible === false || end_slot.visible === false;
-                if (forceHide && !LiteGraph.draw_invisible_connections) {
+                var is_portal = !!node.hide_input_connections;
+                var force_hide = start_slot.visible === false || end_slot.visible === false;
+                if (force_hide && !LiteGraph.draw_invisible_connections) {
                     continue;
                 }
 
@@ -9391,9 +9394,11 @@ LGraphNode.prototype.executeAction = function(action)
                     link,
                     false,
                     0,
-                    !forceHide ? null : 'red',
+                    !force_hide ? null : 'red',
                     start_dir,
-                    end_dir
+                    end_dir,
+                    1,
+                    is_portal
                 );
 
                 //event triggered rendered on top
@@ -9410,7 +9415,9 @@ LGraphNode.prototype.executeAction = function(action)
                         f,
                         "white",
                         start_dir,
-                        end_dir
+                        end_dir,
+                        1,
+                        is_portal
                     );
                     ctx.globalAlpha = tmp;
                 }
@@ -9442,11 +9449,15 @@ LGraphNode.prototype.executeAction = function(action)
         color,
         start_dir,
         end_dir,
-        num_sublines
+        num_sublines,
+        is_portal,
+        dist
     ) {
         if (link) {
             this.visible_links.push(link);
         }
+
+        var dist = dist || distance(a, b);
 
         //choose color
         if (!color && link) {
@@ -9457,12 +9468,39 @@ LGraphNode.prototype.executeAction = function(action)
         }
         if (link != null && this.highlighted_links[link.id]) {
             color = "#FFF";
+        } else if (is_portal === true) {
+            let t = Math.min(50 / dist, 1);
+            let ba = [b[0] - a[0], b[1] - a[1]];
+            this.renderLink(ctx,
+                a,
+                [a[0] + (ba[0]) * t, a[1] + (ba[1]) * t],
+                link,
+                skip_border,
+                flow,
+                color,
+                start_dir,
+                end_dir,
+                num_sublines,
+                1);
+            this.renderLink(ctx,
+                [a[0] + (ba[0]) * (1 - t), a[1] + (ba[1]) * (1 - t)],
+                b,
+                link,
+                skip_border,
+                flow,
+                color,
+                start_dir,
+                end_dir,
+                num_sublines,
+                1);
+            // skip link render if portal
+            return;
         }
 
         start_dir = start_dir || LiteGraph.RIGHT;
         end_dir = end_dir || LiteGraph.LEFT;
 
-        var dist = distance(a, b);
+        
 
         if (this.render_connections_border && this.ds.scale > 0.6) {
             ctx.lineWidth = this.connections_width + 4;
@@ -9477,8 +9515,10 @@ LGraphNode.prototype.executeAction = function(action)
         ctx.beginPath();
         for (var i = 0; i < num_sublines; i += 1) {
             var offsety = (i - (num_sublines - 1) * 0.5) * 5;
+            var portal_render = is_portal && !this.highlighted_links[link.id];
+            var links_render_mode = portal_render ? LiteGraph.LINEAR_LINK : this.links_render_mode;
 
-            if (this.links_render_mode == LiteGraph.SPLINE_LINK) {
+            if (links_render_mode == LiteGraph.SPLINE_LINK) {
                 ctx.moveTo(a[0], a[1] + offsety);
                 var start_offset_x = 0;
                 var start_offset_y = 0;
@@ -9520,7 +9560,7 @@ LGraphNode.prototype.executeAction = function(action)
                     b[0],
                     b[1] + offsety
                 );
-            } else if (this.links_render_mode == LiteGraph.LINEAR_LINK) {
+            } else if (links_render_mode == LiteGraph.LINEAR_LINK) {
                 ctx.moveTo(a[0], a[1] + offsety);
                 var start_offset_x = 0;
                 var start_offset_y = 0;
@@ -9554,7 +9594,7 @@ LGraphNode.prototype.executeAction = function(action)
                         end_offset_y = 1;
                         break;
                 }
-                var l = 15;
+                var l = portal_render ? 0 : 15;
                 ctx.lineTo(
                     a[0] + start_offset_x * l,
                     a[1] + start_offset_y * l + offsety
@@ -9564,7 +9604,7 @@ LGraphNode.prototype.executeAction = function(action)
                     b[1] + end_offset_y * l + offsety
                 );
                 ctx.lineTo(b[0], b[1] + offsety);
-            } else if (this.links_render_mode == LiteGraph.STRAIGHT_LINK) {
+            } else if (links_render_mode == LiteGraph.STRAIGHT_LINK) {
                 ctx.moveTo(a[0], a[1]);
                 var start_x = a[0];
                 var start_y = a[1];
@@ -9598,6 +9638,12 @@ LGraphNode.prototype.executeAction = function(action)
         ) {
             ctx.strokeStyle = "rgba(0,0,0,0.5)";
             ctx.stroke();
+        }
+
+        if (is_portal) {
+            ctx.setLineDash([5, 3]);/*dashes are 5px and spaces are 3px*/
+        } else {
+            ctx.setLineDash([]);
         }
 
         ctx.lineWidth = this.connections_width;
@@ -12932,6 +12978,34 @@ LGraphNode.prototype.executeAction = function(action)
         node.setDirtyCanvas(true, true);
     };
 
+
+    LGraphCanvas.onMenuHideInputConnections = function(value, options, e, menu, node) {
+        node.graph.beforeChange();
+        
+		var newSelected = {};
+		
+		var fApplyMultiNode = function(node){
+			node.hide_input_connections = !node.hide_input_connections;
+		}
+
+		var graphcanvas = LGraphCanvas.active_canvas;
+		if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+			fApplyMultiNode(node);
+		}else{
+			for (var i in graphcanvas.selected_nodes) {
+				fApplyMultiNode(graphcanvas.selected_nodes[i]);
+			}
+		}
+		
+		if(Object.keys(newSelected).length){
+			graphcanvas.selectNodes(newSelected);
+		}
+		
+		node.graph.afterChange();
+
+        node.setDirtyCanvas(true, true);
+    }
+
     LGraphCanvas.onMenuNodeClone = function(value, options, e, menu, node) {
         
 		node.graph.beforeChange();
@@ -13110,6 +13184,14 @@ LGraphNode.prototype.executeAction = function(action)
             options.push({
                 content: "Clone",
                 callback: LGraphCanvas.onMenuNodeClone
+            });
+        }
+
+
+        {
+            options.push({
+                content: node.hide_input_connections !== true ? "Hide Input Connections" : "Show Input Connections",
+                callback: LGraphCanvas.onMenuHideInputConnections
             });
         }
 
